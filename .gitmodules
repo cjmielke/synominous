@@ -1,0 +1,3 @@
+[submodule "synister"]
+	path = synister
+	url = https://github.com/funkelab/synister
