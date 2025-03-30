@@ -1,2 +1,7 @@
 *.pt
 *.pth
+lightning_logs/
+*.json
+wandb/
+*.ckpt
+data/
