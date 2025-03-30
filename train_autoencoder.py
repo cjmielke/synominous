@@ -51,7 +51,7 @@ class AutoEncoder(LightningModule):
 
     def step(self, batch, batch_index):
         latents, synapse_ids = batch
-        l = self.forward(latents)
+        l = self.forward(latents.cuda())
         loss = self.criterion(l, latents)
         return dict(loss=loss)
 
@@ -90,6 +90,9 @@ def train(args, dataset, autoencoder):
     torch.save(autoencoder.state_dict(), "autoencoder_weights.pt")
 
 def infer(args, dataset, autoencoder):
+    if args.out_path is None:
+        args.out_path = args.embeddings_dir.rstrip('/') + f'_autoencoded_{args.dim}'
+
     out_path = Path(args.out_path)
     out_path.mkdir(parents=True, exist_ok=True)
 
@@ -104,19 +107,25 @@ if __name__=='__main__':
     parser.add_argument('embeddings_dir')
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--weights', type=str)
-    parser.add_argument('--out_path', type=str, default='./autoencoder_embeddings')
+    parser.add_argument('--dim', default=32, type=int, help="The number of hidden neurons in the final embedding")
+    parser.add_argument('--out_path', type=str)
     parser.add_argument('--epochs', type=int, default=10)
 
     args = parser.parse_args()
 
     dataset = EmbeddingDataset(args.embeddings_dir)
-    autoencoder = AutoEncoder(dataset.embedding_dim, nHidden=32)
+    autoencoder = AutoEncoder(dataset.embedding_dim, nHidden=args.dim)
 
     if args.weights:
         autoencoder.load_state_dict(torch.load(args.weights))
 
+    autoencoder.cuda()
+
     if args.command == 'train':
         train(args, dataset, autoencoder)
+        infer(args, dataset, autoencoder)
     elif args.command == 'infer':
         assert args.weights is not None
         infer(args, dataset, autoencoder)
+
+

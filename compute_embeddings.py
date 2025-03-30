@@ -9,6 +9,7 @@ from torchvision import datasets, transforms
 from torch.utils.data import DataLoader, Dataset
 import torch
 
+from train_classifier import Classifier
 
 encoder_default = 'xcit_nano_12_p16_224.fb_in1k'
 encoder_default = 'deit3_base_patch16_224'
@@ -16,8 +17,9 @@ encoder_default = 'deit3_base_patch16_224'
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--output_embeddings', default=None)
-parser.add_argument('--grey', action='store_true')
+parser.add_argument('--color', action='store_true')
 parser.add_argument('--timm', default=encoder_default, type=str)
+parser.add_argument('--custom', type=str, help="weights from custom trained model")
 parser.add_argument('--search')
 args = parser.parse_args()
 
@@ -29,16 +31,25 @@ if args.search:
 if args.output_embeddings is None:
     args.output_embeddings = args.timm
 
-output_path = args.output_embeddingss
-if args.grey:
-    output_path += '_grey'
+output_path = args.output_embeddings
+if not args.color:
+    args.output_embeddings += '_grey'
 
 output_path = Path('./data/embeddings') / args.output_embeddings
 output_path.mkdir(exist_ok=True)
 
-# just using an off-the-shelf imagenet trained model for now
-model = timm.create_model(args.timm, pretrained=True, num_classes=0).cuda()
-model = model.eval()
+if args.custom is not None:
+    model = Classifier(args.timm, pretrained=False)
+    state_dict = torch.load(args.custom)
+    if 'state_dict' in state_dict:      # is this a lightning checkpoint?
+        state_dict = state_dict['state_dict']
+    model.load_state_dict(state_dict)
+    model = model.encoder       # want embeddings, not classification head
+else:
+    # just using an off-the-shelf imagenet trained model for now
+    model = timm.create_model(args.timm, pretrained=True, num_classes=0).cuda()
+
+model = model.eval().cuda()
 
 
 transform = transforms.Compose([
@@ -53,7 +64,6 @@ transform = transforms.Compose([
 class SimplerDataset(Dataset):
 
     def __init__(self, image_paths):
-
         self.image_paths = image_paths
 
     def __len__(self): return len(self.image_paths)
@@ -61,14 +71,16 @@ class SimplerDataset(Dataset):
     def __getitem__(self, index):
         filename = self.image_paths[index]
         img = Image.open(filename)#.convert('RGB')
+        if img.mode == 'L':
+            img = img.convert('RGB')
         target = filename.stem
         img = transform(img)
         return img, target
 
 COLOR_PNG_PATH=('./tiles/0')
 
-if args.grey: img_path = Path('./data/greyscale_tiles')
-else: img_path = Path('./data/tiles/0')
+if args.color: img_path = Path('./data/tiles/0')
+else: img_path = Path('./data/greyscale_tiles')
 
 img_paths = list(img_path.glob('*.png'))
 

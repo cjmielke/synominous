@@ -25,48 +25,66 @@
 
   <body class="bg-gray-100">
 
-    <div class="container mx-auto p-12 xl:p-24 xl:py-12">
+    <!--<div class="container mx-auto p-12 xl:p-24 xl:py-12">-->
+    <div class="container  w-full mx-auto p-0 xl:p-0 xl:py-12">
       <h1 class="text-xl mb-6">Finding Syn<i>Ominous</i> looking synapses with similarity search</h1>
-
+      <h2 class="text-xl mb-6">Click any synapse image, and similar images from each category are displayed, with the most similar on the top.</h2>
+      <br/>
       <div class="mb-4">
-        <h4 id="status">Loading database</h4>
-        <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-          <div id="progressbar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+        <h4 id="status"></h4>
+        <div class="progressbar w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+          <div id="progressbar" class="progressbar bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
         </div>
       </div>
 
-
       <div class="grid lg:grid-cols-6 gap-4">
 
+        <label for="metric" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Embedding distance metric</label>
+        <select id="metric" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+          <option value="COS">Cosine</option>
+          <option value="L2">L2</option>
+          <option value="L1">L1</option>
+          <option value="IP">Inner Product</option>
+        </select>
+      </div>
+
+      <br/>
+      <hr/>
+      <br/>
+
+    </div>
+    <div class="w-full mx-auto p-10 xl:p-10 xl:py-10">
+
+      <div class="grid w-full lg:grid-cols-6 gap-4">
+
         <div>
-          <h2 class="text-xl mb-2">Acetylcholine</h2>
+          <h2 class="text-center text-xl mb-2">Acetylcholine</h2>
           <ul id="acetylcholine"  class="list-disc list-inside bg-white p-4 rounded shadow"></ul>
         </div>
 
         <div>
-          <h2 class="text-xl mb-2">Gaba</h2>
+          <h2 class="text-center text-xl mb-2">Gaba</h2>
           <ul id="gaba"  class="list-disc list-inside bg-white p-4 rounded shadow"></ul>
         </div>
 
         <div>
-          <h2 class="text-xl mb-2">Dopamine</h2>
+          <h2 class="text-center text-xl mb-2">Dopamine</h2>
           <ul id="dopamine"  class="list-disc list-inside bg-white p-4 rounded shadow"></ul>
         </div>
 
         <div>
-          <h2 class="text-xl mb-2">Glutamate</h2>
+          <h2 class="text-center text-xl mb-2">Glutamate</h2>
           <ul id="glutamate"  class="list-disc list-inside bg-white p-4 rounded shadow"></ul>
         </div>
 
         <div>
-          <h2 class="text-xl mb-2">Serotonin</h2>
+          <h2 class="text-center text-xl mb-2">Serotonin</h2>
           <ul id="serotonin"  class="list-disc list-inside bg-white p-4 rounded shadow"></ul>
         </div>
 
         <div>
-          <h2 class="text-xl mb-2">Octopamine</h2>
+          <h2 class="text-center text-xl mb-2">Octopamine</h2>
           <ul id="octopamine" class="list-disc list-inside bg-white p-4 rounded shadow">
-            <!-- search results will appear here -->
           </ul>
         </div>
 

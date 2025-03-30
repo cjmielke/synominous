@@ -1,7 +1,14 @@
 import { PGlite } from "https://cdn.jsdelivr.net/npm/@electric-sql/pglite@0.2.11/dist/index.js";
 import { vector } from "https://cdn.jsdelivr.net/npm/@electric-sql/pglite@0.2.11/dist/vector/index.js";
 
+var tiles_path;
+tiles_path = 'data/tiles/0';
+tiles_path = 'data/greyscale_tiles';
+
 const LOCAL_DB_NAME = `vector-search-demo`; // local persistent db
+
+const status = $('#status');
+const progressbar = $('#progressbar');
 
 function chunkArray(arr, n) {
     const size = Math.ceil(arr.length / n);
@@ -22,17 +29,17 @@ async function getDB() {
     return db;
 }
 
-
+//CREATE INDEX IF NOT EXISTS embeddings_embedding_idx ON embeddings USING hnsw (embedding vector_ip_ops);
 
 async function initSchema(db, embsize) {
     await db.exec(`
         CREATE EXTENSION IF NOT EXISTS vector;
         CREATE TABLE IF NOT EXISTS embeddings (
-          synapse TEXT NOT NULL UNIQUE,
-          neurotransmitter TEXT,
+          synapse INT NOT NULL UNIQUE,
+          neurotransmitter INT,
           embedding VECTOR(${embsize})
         );
-        CREATE INDEX IF NOT EXISTS embeddings_embedding_idx ON embeddings USING hnsw (embedding vector_ip_ops);
+        
     `);
 }
 
@@ -47,11 +54,12 @@ async function getFirstRow(db, table) {
 }
 
 async function insertEmbeddings({ embeddings, db }) {
+    status.html(`Loading ${embeddings.length} embeddings into database (this only needs to run on first load)`);
     const chunks = chunkArray(embeddings, 100);
     chunks.forEach(function (embeddings){
     })
     for (const [i, embeddings] of chunks.entries()) {
-        $('#progressbar').css({'width': `${i}%`});
+        progressbar.css({'width': `${i}%`});
         const pg_entries = embeddings.map((entry) => {
             //const neurotransmitter = entry.text.replaceAll(`'`, ``);
             return `\t('${entry.s}', '${entry.n}', '${JSON.stringify(entry.v)}')`;
@@ -59,9 +67,15 @@ async function insertEmbeddings({ embeddings, db }) {
         //console.log(pg_entries);
         await db.exec(`insert into embeddings (synapse, neurotransmitter, embedding) values ${pg_entries};`);
     }
+    progressbar.css({'width': `100%`});
+    status.html('Counting rows');
     console.dir(await db.query(`SELECT COUNT(*) FROM embeddings;`), {depth: null,});
     const result = await db.query(`SELECT COUNT(*) FROM embeddings;`);
     console.log('Done loading database - rowcount :', JSON.stringify(result))
+}
+
+async function buildDatabase(){
+
 }
 
 
@@ -90,22 +104,23 @@ async function getVector(db, eid) {
 // L2 (<->), L1 (<+>), Inner product (<#>), cosine distance (<=>)
 
 var metric, order;
-metric = '<#>'; order = 'DESC';
-metric = '<->'; order = 'ASC';
+//metric = '<#>'; order = 'DESC';
+//metric = '<->'; order = 'ASC';
+//metric='<=>'; order='ASC';
 
-const query = `
-    SELECT * FROM (
-        SELECT 
-            synapse, 
-            neurotransmitter, 
-            embedding ${metric} $1 AS score,
-            rank() over (partition by neurotransmitter order by embeddings.embedding ${metric} $1 ${order}) as rank
-        FROM embeddings
-    ) t
-    WHERE rank < 10
-`;
 
 async function search({db, embedding, match_threshold = 50.0, limit = 10,}) {
+    var query = `
+        SELECT * FROM (
+            SELECT 
+                synapse, 
+                neurotransmitter, 
+                embedding ${metric} $1 AS score,
+                rank() over (partition by neurotransmitter order by embeddings.embedding ${metric} $1 ${order}) as rank
+            FROM embeddings
+        ) t
+        WHERE rank < 10
+    `;
     try {
         console.log(query);
         const res = await db.query(query, [JSON.stringify(embedding),],);
@@ -142,12 +157,14 @@ async function show_similar_tiles(synapse_id, db){
     Object.values(neurotransmitters).forEach(n => {$('#'+n).empty();})
     // place similar tiles into proper column
     searchResults.forEach((row) => {
+        var color='gray';
+        if(row.synapse==synapse_id){color='blue'};
         const thumb = $(`
             <div class="mb-2">
-                <div class="bg-gray-100 p-4 rounded-lg shadow-md max-h-50 overflow-y-auto break-words whitspace-pre-wrap">
+                <div class="bg-${color}-100 p-4 rounded-lg shadow-md max-h-50 overflow-y-auto break-words whitspace-pre-wrap">
                     <p class="text-xs font-semibold text-gray-700">(score: ${row.score.toFixed(4)})</p>
                     <!--<p class="text-sm text-gray-600 mt-1 max-h-10 overflow-auto">${row.neurotransmitter}</p>-->
-                    <img alt="${row.synapse}" src="tiles/0/${row.synapse}.png" />
+                    <img alt="${row.synapse}" src="${tiles_path}/${row.synapse}.png" />
                 </div>
             </div>`);
 
@@ -162,6 +179,26 @@ async function show_similar_tiles(synapse_id, db){
 $(document).ready(async function () {
 
     const db = await getDB();
+
+    // L2 (<->), L1 (<+>), Inner product (<#>), cosine distance (<=>)
+    const metric_select = $("#metric")
+    metric_select.on("change", async function () {
+        console.log(this.value);
+        switch (this.value){
+            case 'L2':
+                metric='<->'; order='ASC'; break;
+            case 'L1':
+                metric='<+>'; order='ASC'; break;
+            case 'COS':
+                metric='<=>'; order='ASC'; break;
+            case 'IP':
+                metric='<#>'; order='ASC'; break
+        }
+    })
+
+    // set default distance metric
+    metric_select.val('IP').change();
+    console.log(`metric : ${metric}   order: ${order}`)
 
     $("#drop_table").on("click", async function () {
         await db.exec('DROP TABLE IF EXISTS embeddings;');
@@ -179,24 +216,32 @@ $(document).ready(async function () {
     var first_synapse=0;
     if(rowCount<1000){
         console.log('fetching embeddings');
-        await $.get("embeddings.json").then(function(d){
-            first_synapse = d.embeddings[0].s;
-            console.log('Done loading database', first_synapse)
-            const embsize = d.embeddings[0].v.length
-            initSchema(db, embsize);
-            insertEmbeddings({ embeddings: d.embeddings, db });
-            const rowCount = countRows(db, "embeddings");
-            console.log(rowCount, 'rows after insert');
-        }).catch(function (err){
-            console.log(err);
-            alert(err.message);
-        })
+        const response = await fetch("embeddings.json");
+        if (!response.ok) {throw new Error(`Response status: ${response.status}`);}
+        const J = await response.json();
+        const embeddings = J['embeddings'];
+        //console.log(embeddings);
+        first_synapse = embeddings[0].s;
+        console.log('Done loading database', first_synapse)
+        const embsize = embeddings[0].v.length
+        await initSchema(db, embsize);
+        await insertEmbeddings({ embeddings: embeddings, db });
+        //await $.get("embeddings.json").then(function(d){
+        //}).catch(function (err){
+        //    console.log(err);
+        //    alert(err.message);
+        //})
 
-    }else{
-        first_synapse = await getFirstRow(db,'embeddings');
-        first_synapse = Number(first_synapse.synapse);
-    }
+    }//else{
+    first_synapse = await getFirstRow(db,'embeddings');
+    first_synapse = Number(first_synapse.synapse);
+    //$('#progressbar').css({'width': '100%'});
+    //$('#status').html('Done!');
+    $('.progressbar').hide();
+    $('#status').hide();
+    show_similar_tiles(first_synapse, db);
+    //}
 
-    show_similar_tiles(first_synapse, db)
+
 
 });
