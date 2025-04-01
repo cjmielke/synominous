@@ -26,6 +26,8 @@ Although the live demo uses an off-the-shelf imagenet vision transformer (XCIT),
 
 This was a quick weekend project, so I decided to train a 2D classifier despite a 3D convnet. I did however exploit the 3 RGB channels of pretrained networks to look at a stack of 3 depthwise tiles for each synapse. The images are all from the [Full Adult Fly Brain "FAFB"](https://flyconnecto.me/2023/10/18/we-mapped-the-full-adult-fly-brain/). Since the volumes don't appear to be isotropic in the Z axis, making use of existing RGB channels of pretrained networks might find some suitable depthwise patterns.
 
+![color_tile](./img/19430040.png)
+
 ![confusion matrix](./img/cm.png)
 
 ![UMAP](./img/umaps/UMAP_fiery_spaceship.png)
