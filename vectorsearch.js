@@ -89,7 +89,7 @@ async function getFirstRow(db, table) {
 }
 
 async function insertEmbeddings({ embeddings, db }) {
-    status.html(`Loading ${embeddings.length} embeddings into database (this only needs to run on first load)`);
+    status.html(`“Building embedding database (only on first load) : ☑ Downloaded ☑ Decompressed | Inserting ...`);
     const chunks = chunkArray(embeddings, 100);
     chunks.forEach(function (embeddings){
     })
@@ -251,15 +251,18 @@ $(document).ready(async function () {
     var first_synapse=0;
     if(rowCount<1000){
         console.log('fetching embeddings');
+        status.html(`“Building embedding database (only on first load) : ☐ Downloaded ☐ Decompressed | Inserting ...`);
         const response = await fetch("embeddings.json.gz");
         if (!response.ok) {throw new Error(`Response status: ${response.status}`);}
         // handle gz-compressed version
+        status.html(`“Building embedding database (only on first load) : ☑ Downloaded ☐ Decompressed | Inserting ...`);
         const ds = new DecompressionStream('gzip');
         const decompressedStream = response.body.pipeThrough(ds);
         const decompressedText = await new Response(decompressedStream).text();
 
         //const J = await response.json();
         const J = JSON.parse(decompressedText);
+        status.html(`“Building embedding database (only on first load) : ☑ Downloaded ☑ Decompressed | Inserting ...`);
         const embeddings = J['embeddings'];
         //console.log(embeddings);
         first_synapse = embeddings[0].s;

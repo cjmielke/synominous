@@ -61,6 +61,6 @@ ax.legend(markerscale=3)
 #    lh._sizes = [10]
 ax.set_title(f'UMAP_{embeddings_path.name}')
 plt.savefig(f'scatterplot.png')
-plt.savefig(f'UMAP_{embeddings_path.name}.png')
+plt.savefig(f'img/umaps/UMAP_{embeddings_path.name}.png')
 
 

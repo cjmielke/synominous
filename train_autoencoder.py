@@ -107,7 +107,7 @@ if __name__=='__main__':
     parser.add_argument('embeddings_dir')
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--weights', type=str)
-    parser.add_argument('--dim', default=32, type=int, help="The number of hidden neurons in the final embedding")
+    parser.add_argument('--dim', default=128, type=int, help="The number of hidden neurons in the final embedding")
     parser.add_argument('--out_path', type=str)
     parser.add_argument('--epochs', type=int, default=10)
 

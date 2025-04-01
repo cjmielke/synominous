@@ -1,3 +1,7 @@
+
+#import gevent.monkey
+#gevent.monkey.patch_all(threads=False)
+
 import json
 import sys
 from random import shuffle
@@ -13,8 +17,9 @@ from pathlib import Path
 DATA_ROOT = Path('./synister/data/fafb_v3/')
 
 CLOUDVOLUME_URL = 'precomputed://gs://neuroglancer-fafb-data/fafb_v14/fafb_v14_orig'
-vol = CloudVolume(CLOUDVOLUME_URL, use_https=True)
+vol = CloudVolume(CLOUDVOLUME_URL, use_https=True, green_threads=False)
 vol.progress=False
+
 
 NEUROTRANSMITTERS = dict(
     acetylcholine=0,
@@ -36,6 +41,7 @@ def get_synapse_tile_at_coord(x, y, z, m = 128):
 
 def download_synapse(S: pd.Series):
     #print(S)
+    if type(S)==tuple: S=S[1]
     ID = S['synapse']
     #img_file = f'synapse_tiles/{ID}.png'
     img_file = f'data/tiles/0/{ID}.png'
@@ -86,7 +92,7 @@ def download():
 
     synapses_df = get_annotated_synapses()
     # FIXME - temporarily focus on the rare ones
-    synapses_df = synapses_df[synapses_df.neurotransmitters.isin(['octopamine','serotonin'])]
+    synapses_df = synapses_df[synapses_df.neurotransmitters.isin(['gaba', 'dopamine','glutamate','serotonin', 'octopamine'])]
     print(synapses_df.shape)
     #sys.exit()
 
@@ -101,17 +107,15 @@ def download():
     for _, row in tqdm(queue):
         download_synapse(row)
 
-    '''
+
+    #'''
     def run(f, my_iter):
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
             results = list(tqdm(executor.map(f, my_iter), total=len(my_iter)))
         return results
 
-    items = list(J.items())
-    from random import shuffle
-    shuffle(items)
-    run(download_synapse, items)
-    '''
+    #run(download_synapse, queue)
+    #'''
 
 
 if __name__ == '__main__':

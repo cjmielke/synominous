@@ -52,10 +52,13 @@ else:
 model = model.eval().cuda()
 
 
+mean=[0.5, 0.5, 0.5]
+std=[0.5, 0.5, 0.5]
 transform = transforms.Compose([
     #transforms.Resize((224, 224)), # Resize images
     transforms.CenterCrop(224),
-    transforms.ToTensor()
+    transforms.ToTensor(),
+    transforms.Normalize(mean=mean, std=std)
 ])
 
 
