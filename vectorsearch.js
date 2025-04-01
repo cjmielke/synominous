@@ -1,14 +1,49 @@
 import { PGlite } from "https://cdn.jsdelivr.net/npm/@electric-sql/pglite@0.2.11/dist/index.js";
 import { vector } from "https://cdn.jsdelivr.net/npm/@electric-sql/pglite@0.2.11/dist/vector/index.js";
 
-var tiles_path;
-tiles_path = 'data/tiles/0';
-tiles_path = 'data/greyscale_tiles';
+var tiles_path; var tiles_suffix;
+tiles_path = 'data/tiles/0'; tiles_suffix = '.png';
+tiles_path = 'data/greyscale_tiles'; tiles_suffix = '.png';
+tiles_path = 'https://cjmielke.github.io/synominous_grey_tiles/tiles/'; tiles_suffix = '-fs8.png';
+
 
 const LOCAL_DB_NAME = `vector-search-demo`; // local persistent db
 
 const status = $('#status');
 const progressbar = $('#progressbar');
+
+
+async function fetchAndProcessGzipJson(url) {
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'Accept-Encoding': 'gzip' // Explicitly request gzipped content
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    // Check if the server sent a Content-Encoding header indicating gzip
+    if (response.headers.get('Content-Encoding') === 'gzip') {
+      // Use DecompressionStream to handle the gzipped response
+      const ds = new DecompressionStream('gzip');
+      const decompressedStream = response.body.pipeThrough(ds);
+      const decompressedText = await new Response(decompressedStream).text();
+      const jsonData = JSON.parse(decompressedText);
+      return jsonData;
+    } else {
+      // If not gzipped, assume it's plain text JSON
+      const jsonData = await response.json();
+      return jsonData;
+    }
+  } catch (error) {
+    console.error("Error fetching or processing data:", error);
+    throw error; // Re-throw to allow handling by the caller
+  }
+}
+
 
 function chunkArray(arr, n) {
     const size = Math.ceil(arr.length / n);
@@ -119,7 +154,7 @@ async function search({db, embedding, match_threshold = 50.0, limit = 10,}) {
                 rank() over (partition by neurotransmitter order by embeddings.embedding ${metric} $1 ${order}) as rank
             FROM embeddings
         ) t
-        WHERE rank < 10
+        WHERE rank < 5
     `;
     try {
         console.log(query);
@@ -164,7 +199,7 @@ async function show_similar_tiles(synapse_id, db){
                 <div class="bg-${color}-100 p-4 rounded-lg shadow-md max-h-50 overflow-y-auto break-words whitspace-pre-wrap">
                     <p class="text-xs font-semibold text-gray-700">(score: ${row.score.toFixed(4)})</p>
                     <!--<p class="text-sm text-gray-600 mt-1 max-h-10 overflow-auto">${row.neurotransmitter}</p>-->
-                    <img alt="${row.synapse}" src="${tiles_path}/${row.synapse}.png" />
+                    <img alt="${row.synapse}" src="${tiles_path}/${row.synapse}${tiles_suffix}" />
                 </div>
             </div>`);
 
@@ -197,7 +232,7 @@ $(document).ready(async function () {
     })
 
     // set default distance metric
-    metric_select.val('IP').change();
+    metric_select.val('COS').change();
     console.log(`metric : ${metric}   order: ${order}`)
 
     $("#drop_table").on("click", async function () {
@@ -216,9 +251,15 @@ $(document).ready(async function () {
     var first_synapse=0;
     if(rowCount<1000){
         console.log('fetching embeddings');
-        const response = await fetch("embeddings.json");
+        const response = await fetch("embeddings.json.gz");
         if (!response.ok) {throw new Error(`Response status: ${response.status}`);}
-        const J = await response.json();
+        // handle gz-compressed version
+        const ds = new DecompressionStream('gzip');
+        const decompressedStream = response.body.pipeThrough(ds);
+        const decompressedText = await new Response(decompressedStream).text();
+
+        //const J = await response.json();
+        const J = JSON.parse(decompressedText);
         const embeddings = J['embeddings'];
         //console.log(embeddings);
         first_synapse = embeddings[0].s;
