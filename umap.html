@@ -1,0 +1,145 @@
+
+<!doctype html>
+<meta charset="utf-8">
+<title>MaxPlot Demo</title>
+<head>
+
+<script src="maxPlot.js"></script>
+<script src="normalizeWheel.js"></script>
+
+<!--<link rel='stylesheet' href="https://cdnjs.cloudflare.com/ajax/libs/meyer-reset/2.0/reset.min.css"></style>
+-->
+
+</head>
+<body>
+
+<br/>
+
+<script>
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Your code here
+
+	// first create an empty div
+	//var div = document.createElement('div');
+	// now append the div to the document (you can also do this later)
+	//document.body.appendChild(div);
+
+	var div = document.getElementById('plot');
+	const rect = div.getBoundingClientRect();
+	console.log(div);
+
+	// tell MaxPlot to add everything it needs under this div
+	//var fig = new MaxPlot(div, 50, 50, 800, 600, {'radius':30, 'alpha':1.0});
+	var fig = new MaxPlot(div, rect.top, rect.left, rect.width, rect.height, {'radius':30, 'alpha':1.0});
+
+	// show the borders of our plot
+	fig.canvas.style.border = "1px solid black";
+
+	fetch('umap.json.gz')
+	.then(response =>{
+		if (!response.ok) {throw new Error(`HTTP error! status: ${response.status}`);}
+		//return response.json();
+		const ds = new DecompressionStream('gzip');
+		const decompressedStream = response.body.pipeThrough(ds);
+		return new Response(decompressedStream).text();
+	})
+	.then(decompressedText => {
+		const jsonData = JSON.parse(decompressedText);
+		return jsonData;
+	})
+	.then(data => {
+		console.log(data);
+		window.umap_data = data;
+		drawUMAP(fig, data);
+		setHandlers(fig);
+		document.getElementById("msg").innerHTML="Hover over a point to see the image";
+	})
+});
+
+
+
+function drawUMAP(fig, data){
+    const coords=[];
+    const colors=[];
+    for(var i=0; i<data.length; i++){
+        coords.push(data[i].x);
+        coords.push(data[i].y);
+        colors.push(data[i].n);
+    }
+
+    // add label for clusters
+    const labels = [
+	[-6.13, -3.9, "Acetycholine"],
+	[2.6, -3.2 , "Gaba"],
+	[7.4, 7.3, "Serotonin"],
+	[8.4, 0, "Dopamine"],
+	[9.2, 2.1, "Octopamine"],
+	[0, 4.4, "Glutamate"]
+    ];
+
+    fig.initPlot({'radius':1, 'alpha':0.8});
+    fig.setCoords(coords, labels);
+    // set four different colors
+    fig.setColors(["000000", "ff0000", "00ff00", "0000ff", "ff00ff", "00ffff"]);
+    // and assign every circle its own color
+    fig.setColorArr(colors);
+    fig.setTitle("Example plot");
+    // and draw it
+    fig.drawDots();
+
+}
+
+
+
+
+function setHandlers(fig){
+console.log('creating handlers');
+
+fig.onSelChange = function(cellIds) { 
+    document.getElementById("selected").value = cellIds.length+ " selected"; 
+};
+
+const the_img = document.getElementById("tile");
+fig.onCellHover = function(cellIds) {
+    if(cellIds==null) return;
+    const first_dot = cellIds[0];
+    umap_point = window.umap_data[first_dot];
+    console.log(umap_point);
+    const img_url = `https://cjmielke.github.io/synominous_grey_tiles/tiles/${umap_point.s}-fs8.png`;
+    //const img_url = `data/greyscale_tiles/${umap_point.s}.png`;
+    console.log(img_url);
+    the_img.src = img_url;
+    if (cellIds===null)
+        document.getElementById("hover").value = ""; 
+    else
+        document.getElementById("hover").value = cellIds.length+" hover"; 
+};
+fig.onCellClick = function(cellIds) { 
+    if (cellIds===null)
+        document.getElementById("clicked").value = ""; 
+    else
+        document.getElementById("clicked").value = cellIds.length+" clicked"; 
+};
+
+
+
+};
+</script>
+
+<table>
+    <tr>
+	<td><center>
+		<h2 id="msg">Loading</h2>
+		<div id="plot" style="width: 800px; height: 600px;" width="800px !important" height="600px" border="1px red">foo</div>
+	</center></td>
+	<td style="width: 50px;"></td>
+	<td><center><div style="width: 256px;">
+		<h4>Img Preview</h4>
+		<br />
+		<img id="tile" style="width: 224px; height: 224px;" />
+	</div></center></td>
+    </tr>
+</table>
+
+</body>

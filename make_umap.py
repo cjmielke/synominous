@@ -51,6 +51,9 @@ umap_df = pd.DataFrame(dict(s=df.synapse, n=df['n'], neurotransmitter=df['neurot
                             x=um_x,y=um_y))
 print(umap_df)
 
+with open('umap.json', 'w') as fh:
+    fh.write(umap_df.to_json(orient='records'))
+
 import seaborn as sns
 import matplotlib.pyplot as plt
 sns.set_theme(rc={'figure.figsize':(12,12)})
