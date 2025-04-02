@@ -6,6 +6,8 @@ Utilizing the same dataset, presented here is a simple web-app that performs in-
 
 [Live demo is here](https://cjmielke.github.io/synominous/vectorsearch.html)
 
+[NEW : Interactive UMAP viewer](https://cjmielke.github.io/synominous/umap.html)
+
 Does it work? Kinda! Unlike some previous image similarity work Ive done (Facial rec, satellite imagery), my brain finds it much harder to evaluate whether or not the similarities are sensible. This is also the first time Ive used the in-browser [PGVector](https://github.com/pgvector/pgvector) database, as opposed to server-side platforms like [Milvus](https://github.com/milvus-io/milvus) or [Annoy](https://github.com/spotify/annoy). I may revisit this project in the future with a larger scale and a server-side database.
 
 ### Some examples:
